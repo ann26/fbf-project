@@ -39,12 +39,25 @@ define([
                 polygonName = polygonName.replaceAll('T', '_');
                 polygonName = polygonName.split('.')[0];
                 polygonName = 'flood_' + polygonName;
+                let post_data = {
+                    'geometry': that.polygon,
+                    'name': polygonName,
+                    'reporting_date_time': new Date().toMysqlFormat(),
+                    'source': 'user',
+                    'station': $('#station').val()
+                };
+
+                if ($('#enable_forecast_date').is(':checked')) {
+                    post_data['forecast_date_time'] = new Date($('#forecast_date').val()).toMysqlFormat();
+                }
+
+                if ($('#enable_station').is(':checked')) {
+                    post_data['station'] = $('#station').val();
+                }
+
                 that.xhrPolygon = AppRequest.post(
                     postgresUrl + 'flood',
-                    {
-                        'geometry': that.polygon,
-                        'name': polygonName
-                    },
+                    post_data,
                     null,
                     function (data, textStatus, request) {
                         if (data['status'] === 201) {

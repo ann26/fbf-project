@@ -46,8 +46,25 @@ define([
             this.map.on('draw:created', (e) => {
                 that.drawGroup.clearLayers();
                 that.drawGroup.addLayer(e.layer);
-                dispatcher.trigger('map:update-polygon', that.postgrestFilter());
+                var popupContent = '<form role="form" id="draw-form" enctype="multipart/form-data" class="form-horizontal">' +
+                    '<div class="form-group">' +
+                    '<input type="checkbox" id="enable_forecast_date" onchange="$(\'#forecast_date\').prop(\'disabled\', function(i, v) { return !v; })">&nbsp;<label for="forecast_date">Forecast date: </label>' +
+                    '<input class="form-control" type="datetime-local" id="forecast_date" disabled><br/>' +
+                    '<input type="checkbox" id="enable_station" onchange="$(\'#station\').prop(\'disabled\', function(i, v) { return !v; })">&nbsp;<label for="station">Station: </label><input class="form-control" type="text" id="station" disabled><br/>' +
+                    '<button type="submit" value="submit" class="btn btn-primary">Save</button>' +
+                    '</div></form>';
+                that.drawGroup.bindPopup(popupContent,{
+                    keepInView: true,
+                    closeButton: false
+                    }).openPopup();
+
+                $("#draw-form").submit(function(e){
+                    e.preventDefault();
+                    dispatcher.trigger('map:update-polygon', that.postgrestFilter());
+                    that.drawGroup.closePopup().unbindPopup();
+                });
             });
+
             this.map.on('draw:deleted', (evt) => {
                 dispatcher.trigger('map:update-polygon', that.postgrestFilter());
                 that.redraw();
