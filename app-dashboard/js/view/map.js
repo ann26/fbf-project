@@ -52,6 +52,7 @@ define([
                     '<input class="form-control" type="datetime-local" id="forecast_date" disabled><br/>' +
                     '<input type="checkbox" id="enable_station" onchange="$(\'#station\').prop(\'disabled\', function(i, v) { return !v; })">&nbsp;<label for="station">Station: </label><input class="form-control" type="text" id="station" disabled><br/>' +
                     '<button type="submit" value="submit" class="btn btn-primary">Save</button>' +
+                    '<button type="button" id="cancel-draw" class="btn btn-default">Cancel</button>' +
                     '</div></form>';
                 that.drawGroup.bindPopup(popupContent,{
                     keepInView: true,
@@ -63,6 +64,11 @@ define([
                     dispatcher.trigger('map:update-polygon', that.postgrestFilter());
                     that.drawGroup.closePopup().unbindPopup();
                 });
+
+                $('#cancel-draw').click(function () {
+                    that.drawGroup.closePopup().unbindPopup();
+                    that.drawGroup.removeLayer(e.layer);
+                })
             });
 
             this.map.on('draw:deleted', (evt) => {
