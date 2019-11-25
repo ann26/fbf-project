@@ -1,9 +1,11 @@
 define([
     'backbone',
     'jquery',
+    'airDatepicker',
+    'airDatepickerEN',
     'js/view/basemap.js',
     'js/view/layers.js',
-], function (Backbone, $, Basemap, Layers) {
+], function (Backbone, $, airDatepicker, airDatepickerEN, Basemap, Layers) {
     return Backbone.View.extend({
         initBounds: [[-21.961179941367273,93.86358289827513],[16.948660219367564,142.12675002072507]],
         initialize: function () {
@@ -49,15 +51,21 @@ define([
                 var popupContent = '<form role="form" id="draw-form" enctype="multipart/form-data" class="form-horizontal">' +
                     '<div class="form-group">' +
                     '<input type="checkbox" id="enable_forecast_date" onchange="$(\'#forecast_date\').prop(\'disabled\', function(i, v) { return !v; })">&nbsp;<label for="forecast_date">Forecast date: </label>' +
-                    '<input class="form-control" type="datetime-local" id="forecast_date" disabled><br/>' +
+                    '<input class="form-control" type="text" id="forecast_date" disabled><br/>' +
                     '<input type="checkbox" id="enable_station" onchange="$(\'#station\').prop(\'disabled\', function(i, v) { return !v; })">&nbsp;<label for="station">Station: </label><input class="form-control" type="text" id="station" disabled><br/>' +
                     '<button type="submit" value="submit" class="btn btn-primary">Save</button>' +
                     '<button type="button" id="cancel-draw" class="btn btn-default">Cancel</button>' +
                     '</div></form>';
                 that.drawGroup.bindPopup(popupContent,{
                     keepInView: true,
-                    closeButton: false
+                    closeButton: false,
+                    closeOnClick: false
                     }).openPopup();
+
+                $('#forecast_date').datepicker({
+                    language: 'en',
+                    timepicker: true
+                });
 
                 $("#draw-form").submit(function(e){
                     e.preventDefault();

@@ -68,3 +68,7 @@ body {
 #cancel-draw {
     margin-left: 5px;
 }
+
+.datepickers-container {
+    z-index: 1000000 !important;
+}
