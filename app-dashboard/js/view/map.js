@@ -42,41 +42,38 @@ define([
                     edit: false
                 }
             });
-            this.map.addControl(this.drawControl);
+            // this.map.addControl(this.drawControl);
+
+            let polygonDrawer = new L.Draw.Polygon(that.map);
+            
+            $('#draw-flood').click(function () {
+                if ($(this).hasClass('enable')) {
+                    polygonDrawer.disable();
+                    $(this).removeClass('enable');
+                } else {
+                    polygonDrawer.enable();
+                    $(this).addClass('enable');
+                }
+            });
+            
             this.map.addLayer(this.drawGroup);
 
             this.map.on('draw:created', (e) => {
                 that.drawGroup.clearLayers();
                 that.drawGroup.addLayer(e.layer);
-                var popupContent = '<form role="form" id="draw-form" enctype="multipart/form-data" class="form-horizontal">' +
-                    '<div class="form-group">' +
-                    '<input type="checkbox" id="enable_forecast_date" onchange="$(\'#forecast_date\').prop(\'disabled\', function(i, v) { return !v; })">&nbsp;<label for="forecast_date">Forecast date: </label>' +
-                    '<input class="form-control" type="text" id="forecast_date" disabled><br/>' +
-                    '<input type="checkbox" id="enable_station" onchange="$(\'#station\').prop(\'disabled\', function(i, v) { return !v; })">&nbsp;<label for="station">Station: </label><input class="form-control" type="text" id="station" disabled><br/>' +
-                    '<button type="submit" value="submit" class="btn btn-primary">Save</button>' +
-                    '<button type="button" id="cancel-draw" class="btn btn-default">Cancel</button>' +
-                    '</div></form>';
-                that.drawGroup.bindPopup(popupContent,{
-                    keepInView: true,
-                    closeButton: false,
-                    closeOnClick: false
-                    }).openPopup();
+                $('#draw-flood-form').show();
 
-                $('#forecast_date').datepicker({
-                    language: 'en',
-                    timepicker: true
+                $('#cancel-draw').click(function () {
+                    that.drawGroup.removeLayer(e.layer);
+                    $('#draw-flood').removeClass('enable');
                 });
 
                 $("#draw-form").submit(function(e){
                     e.preventDefault();
                     dispatcher.trigger('map:update-polygon', that.postgrestFilter());
-                    that.drawGroup.closePopup().unbindPopup();
+                    $('#draw-flood').removeClass('enable');
+                    $('#draw-flood-form').hide();
                 });
-
-                $('#cancel-draw').click(function () {
-                    that.drawGroup.closePopup().unbindPopup();
-                    that.drawGroup.removeLayer(e.layer);
-                })
             });
 
             this.map.on('draw:deleted', (evt) => {

@@ -46,4 +46,10 @@ require([
     AppRequest = new RequestView();
     dispatcher = _.extend({}, Backbone.Events);
     mapView = new MAP();
+
+    $('#forecast_date').datepicker({
+        language: 'en',
+        timepicker: true,
+        position: 'left top'
+    });
 });
