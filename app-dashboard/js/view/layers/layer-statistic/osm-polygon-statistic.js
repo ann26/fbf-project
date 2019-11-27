@@ -1,6 +1,6 @@
 define([
-    'backbone', 'leaflet'], function (
-    Backbone, L) {
+    'backbone', 'leaflet', 'js/view/layers/flood-form.js'], function (
+    Backbone, L, FloodForm) {
     return Backbone.View.extend({
         xhrPolygon: null,
         polygon: null,
@@ -34,26 +34,8 @@ define([
                 statistic.loading();
             });
             if (this.polygon) {
-                let polygonName = (new Date()).toISOString().replaceAll(':', '_');
-                polygonName = polygonName.replaceAll('-', '_');
-                polygonName = polygonName.replaceAll('T', '_');
-                polygonName = polygonName.split('.')[0];
-                polygonName = 'flood_' + polygonName;
-                let post_data = {
-                    'geometry': that.polygon,
-                    'name': polygonName,
-                    'reporting_date_time': new Date().toMysqlFormat(),
-                    'source': 'user',
-                    'station': $('#station').val()
-                };
-
-                if ($('#enable_forecast_date').is(':checked')) {
-                    post_data['forecast_date_time'] = new Date($('#forecast_date').val()).toMysqlFormat();
-                }
-
-                if ($('#enable_station').is(':checked')) {
-                    post_data['station'] = $('#station').val();
-                }
+                let flood_form = new FloodForm(this.polygon);
+                let post_data = flood_form.post_data;
 
                 that.xhrPolygon = AppRequest.post(
                     postgresUrl + 'flood',
