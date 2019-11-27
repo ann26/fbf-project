@@ -42,16 +42,13 @@ define([
                     edit: false
                 }
             });
-            // this.map.addControl(this.drawControl);
-
-            let polygonDrawer = new L.Draw.Polygon(that.map);
             
             $('#draw-flood').click(function () {
                 if ($(this).hasClass('enable')) {
-                    polygonDrawer.disable();
+                    that.map.removeControl(that.drawControl);
                     $(this).removeClass('enable');
                 } else {
-                    polygonDrawer.enable();
+                    that.map.addControl(that.drawControl);
                     $(this).addClass('enable');
                 }
             });
@@ -66,12 +63,14 @@ define([
                 $('#cancel-draw').click(function () {
                     that.drawGroup.removeLayer(e.layer);
                     $('#draw-flood').removeClass('enable');
+                    that.map.removeControl(that.drawControl);
                 });
 
                 $("#draw-form").submit(function(e){
                     e.preventDefault();
                     dispatcher.trigger('map:update-polygon', that.postgrestFilter());
                     $('#draw-flood').removeClass('enable');
+                    that.map.removeControl(that.drawControl);
                     $('#draw-flood-form').hide();
                 });
             });
