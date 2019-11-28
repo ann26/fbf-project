@@ -89,6 +89,7 @@ body {
     padding-top: 7px;
     height: 62px;
     background: #2F87A6;
+    border: none;
 }
 
 .navbar-logo .col-lg-1 {
@@ -116,15 +117,23 @@ body {
     margin-bottom: 10px;
 }
 
+.btn-warning:hover {
+    background-color: #FDC066;
+}
+
+.btn-back:hover {
+    opacity: 0.5;
+}
+
 .btn-full-width {
     width: 100%;
 }
 
 .btn-back {
     color: #f0ad4e;
-    background: transparent;
+    background: transparent !important;
     font-size: 20pt;
-    border: transparent;
+    border: transparent !important;
     padding: 0;
     line-height: 20pt;
     margin-top: -3px;
