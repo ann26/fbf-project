@@ -90,7 +90,7 @@ define([
                     $('.btn-change-date').prop('disabled', false)
                 },
                 function (data, textStatus, request) {
-                    $floodListBtn.val('Fetching flood data failed.');
+                    $floodListBtn.val('Fetch failed.');
                     console.log(data);
                 });
         },
@@ -157,7 +157,6 @@ define([
                     $.each(data, function (id, value) {
                         that.building_type[value['id']] = value['building_class']
                     });
-                    console.log(that.building_type)
                 },function (data, textStatus, request) {
                     console.log('Building type request failed');
                     console.log(data)
