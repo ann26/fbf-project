@@ -136,7 +136,6 @@ define([
             if(that.geojson_layer){
                 that.map.removeLayer(that.geojson_layer)
             }
-            this.useIntersect = true;
             this.redraw();
             that.geojson_layer = new L.GeoJSON(polygon).addTo(that.map);
             that.map.fitBounds(that.geojson_layer.getBounds());
@@ -147,7 +146,6 @@ define([
             if(that.geojson_layer){
                 that.map.removeLayer(that.geojson_layer)
             }
-            this.useIntersect = false;
             this.redraw();
             that.map.fitBounds(this.initBounds);
             dispatcher.trigger('dashboard:reset')
