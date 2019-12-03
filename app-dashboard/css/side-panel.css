@@ -233,3 +233,18 @@ form label {
 .browse-header img {
     height: 25px;
 }
+
+.arrow-start {
+    position: absolute;
+    bottom: 27px;
+    right: 110px;
+}
+
+.arrow-start img {
+    -webkit-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    -o-transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    transform: rotate(-90deg);
+    height: 60px;
+}

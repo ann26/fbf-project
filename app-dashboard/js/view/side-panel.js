@@ -57,6 +57,7 @@ define([
         openBrowseFlood: function (e) {
             $('.browse-btn-icon').hide();
             $('.panel-browse-flood').show("slide", { direction: "down" }, 400);
+            $('.arrow-start').hide();
         },
         hideBrowseFlood: function () {
             $('.browse-btn-icon').show();
