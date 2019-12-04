@@ -207,6 +207,12 @@ body {
     margin-right: 7px;
 }
 
+.btn-back-summary-panel {
+    position: absolute;
+    left: 15px;
+    top: 73px;
+}
+
 /* Bouncy browse icon */
 .browse-btn-icon {
     position: absolute;

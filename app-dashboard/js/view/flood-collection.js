@@ -1,5 +1,5 @@
 define([
-    'backbone', 'underscore', 'leaflet', 'wellknown'
+    'backbone', 'underscore', 'leaflet', 'wellknown', 'js/view/dummy-data.js'
 ], function (Backbone, _, L, Wellknown) {
     return Backbone.View.extend({
         flood_collection: null,
@@ -13,6 +13,7 @@ define([
             dispatcher.on('flood:fetch-flood', this.fetchFlood, this);
             dispatcher.on('flood:fetch-flood-by-id', this.fetchFloodByID, this);
             dispatcher.on('flood:fetch-flood-vulnerability', this.fetchVulnerability, this);
+            dispatcher.on('flood:fetch-dummy-data', this.fetchDummyData, this)
         },
         fetchFloodCollection: function () {
             let $floodListBtn = $('#date-browse-flood');
@@ -68,7 +69,7 @@ define([
                             let flood_data = that.fetchFlood(date);
                             if(flood_data != null) {
                                 that.displayed_flood = flood_data[0];
-                                that.fetchVulnerability(flood_data[0]['id']);
+                                // that.fetchVulnerability(flood_data[0]['id']);
                                 let polygon = Wellknown.parse('SRID=4326;' + flood_data[0]['st_astext']);
                                 dispatcher.trigger('map:draw-geojson', polygon);
                                 $('.flood-info').html('<div>' + flood_data[0].name + '</div>');
@@ -78,6 +79,7 @@ define([
                                 }else {
                                     $('.browse-arrow').prop('disabled', true).hide();
                                 }
+                                that.fetchDummyData('district', flood_data[0]['id'], true);
                             }else {
                                 that.displayed_flood = null;
                                 $('.flood-info').html('');
@@ -221,6 +223,67 @@ define([
                     console.log(data);
                     return null
                 })
+        },
+        fetchDummyData: function (region, region_id, renderRegionDetail) {
+            if(!region) {
+                return []
+            }
+
+            let data = {
+                'village': dummyVillage,
+                'district': dummyDistrict,
+                'sub_district': dummySubdistrict
+            };
+
+            let buildings = [];
+            let overall = [];
+            let region_render;
+            let main_panel = true;
+            if(renderRegionDetail) {
+                region_render = region;
+                $.each(data[region], function (idx, value) {
+                    buildings[idx] = [];
+                    $.each(value, function (key, value) {
+                        buildings[idx][key] = value;
+                        if (!overall[key]) {
+                            overall[key] = value
+                        } else {
+                            overall[key] += value
+                        }
+                    })
+                });
+                delete overall[region + '_id'];
+                delete overall['name'];
+            }else {
+                main_panel = false;
+                let sub_region = 'sub_district';
+                if(region === 'sub_district'){
+                    sub_region = 'village'
+                }
+                region_render = sub_region;
+
+                if(region !== 'village') {
+                    $.each(data[sub_region], function (idx, value) {
+                        buildings[idx] = [];
+                        $.each(value, function (key, value) {
+                            buildings[idx][key] = value;
+                        })
+                    });
+                }
+
+                for(let index=0; index<data[region].length; index++){
+                    if(data[region][index]['id'] === parseInt(region_id)){
+                        overall = data[region][index];
+                        break
+                    }
+                }
+                overall['region'] = region;
+            }
+            dispatcher.trigger('dashboard:render-chart-2', overall, main_panel);
+
+            if(region !== 'village') {
+                dispatcher.trigger('dashboard:render-region-summary', buildings, region_render)
+            }
         }
     })
 });
