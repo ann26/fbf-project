@@ -1,169 +1,183 @@
 define([
-    'backbone', 'underscore', 'leaflet', 'wellknown'
-], function (Backbone, _, L, Wellknown) {
+    'backbone',
+    'underscore',
+    'moment',
+    'leaflet',
+    'wellknown',
+    'utils',
+    'js/model/forecast_event.js'
+], function (Backbone, _, moment, L, Wellknown, utils, ForecastEvent) {
     return Backbone.View.extend({
-        flood_collection: null,
-        flood_on_date: null,
-        displayed_flood: null,
+        el: '.panel-browse-flood',
+        forecasts_list: null,
+        event_date_hash: null,
+        selected_flood: null,
         building_type: {},
-        flood_dates: [],
+
+        events: {
+            'click #prev-date': 'clickNavigateForecast',
+            'click #next-date': 'clickNavigateForecast'
+        },
         initialize: function () {
             this.fetchBuildingType();
-            this.fetchFloodCollection();
-            dispatcher.on('flood:fetch-flood', this.fetchFlood, this);
-            dispatcher.on('flood:fetch-flood-by-id', this.fetchFloodByID, this);
+            this.fetchForecastCollection();
+            // jquery element
+            this.$flood_info = this.$el.find('.flood-info');
+            this.$prev_date_arrow = this.$el.find('#prev-date');
+            this.$next_date_arrow = this.$el.find('#next-date');
+            this.$datepicker_browse = this.$el.find('#date-browse-flood');
+            this.$forecast_arrow_up = this.$el.find('.browse-arrow.arrow-up');
+            this.$forecast_arrow_down = this.$el.find('.browse-arrow.arrow-down');
+            this.datepicker_browse = null;
+
+            // dispatcher registration
+            dispatcher.on('flood:fetch-forecast-collection', this.fetchForecastCollection, this);
+            dispatcher.on('flood:update-forecast-collection', this.initializeDatePickerBrowse, this);
+            dispatcher.on('flood:fetch-forecast', this.fetchForecast, this);
             dispatcher.on('flood:fetch-flood-vulnerability', this.fetchVulnerability, this);
         },
-        fetchFloodCollection: function () {
-            let $floodListBtn = $('#date-browse-flood');
-            let that = this;
-            this.xhrPolygon = AppRequest.get(
-                postgresUrl + 'flood_wkt_view',
-                {
-                    order: 'forecast_date_time.asc'
+        initializeDatePickerBrowse: function(){
+            const that = this;
+            if(this.datepicker_browse){
+                // we need to recreate datepicker
+                // because the forecast lists has changed
+                this.datepicker_browse.destroy();
+            }
+            this.$datepicker_browse.datepicker({
+                language: 'en',
+                autoClose: true,
+                dateFormat: 'dd/mm/yyyy',
+                onRenderCell: function (date, cellType) {
+                    let date_string = moment(date).formatDate();
+                    if (cellType === 'day' && date_string in that.event_date_hash) {
+                        return {
+                            classes: 'flood-date'
+                        };
+                    }
                 },
-                {
-                    'Range-Unit': 'items',
-                    'Range': '',
-                    'Prefer': ''
-                },
-                function (data, textStatus, request) {
-                    $floodListBtn.val('Select a date');
+                onSelect: function onSelect(fd, date) {
+                    if (date) {
+                        that.fetchForecast(date);
+                    } else {
+                        // empty date or deselected;
+                        that.deselectForecast();
+                    }
+                }
+            });
 
-                    let flood_dates = [];
-                    let flood_collection_array = {};
-                    $.each(data, function (index, value) {
-                        if (value['forecast_date_time'] !== null) {
-                            let date = new Date(value['forecast_date_time'] + 'Z');
+            // change message
+            this.$datepicker_browse.val('Select forecast date');
+            this.datepicker_browse = this.$datepicker_browse.data('datepicker');
+        },
+        fetchForecastCollection: function () {
+            const today = moment().utc();
+            const that = this;
 
-                            date.setUTCHours(0, 0, 0, 0);
-                            let string_date = date.toISOString();
+            // Get flood forecast collection
+            ForecastEvent.getCurrentForecastList(today)
+                .then(function(data){
 
-                            if(!flood_collection_array.hasOwnProperty(string_date)){
-                                flood_collection_array[string_date] = [value]
-                                flood_dates.push(string_date);
-                                that.flood_dates.push(new Date(string_date))
-                            }else {
-                                flood_collection_array[string_date].push(value)
-                            }
-                        }
-                    });
-                    that.flood_collection = flood_collection_array;
+                    that.forecasts_list = data;
 
-                    $('.datepicker-browse').datepicker({
-                        language: 'en',
-                        autoClose: true,
-                        dateFormat: 'dd/mm/yyyy',
-                        onRenderCell: function (date, cellType) {
-                            let _date = new Date(date);
-                            _date.setTime(_date.getTime() - _date.getTimezoneOffset() * 60 * 1000);
-                            _date.setUTCHours(0,0,0,0);
-                            if (cellType === 'day' && flood_dates.indexOf(_date.toISOString()) > -1) {
-                                return {
-                                    classes: 'flood-date'
-                                }
-                            }
-                        },
-                        onSelect: function onSelect(fd, date) {
-                            let flood_data = that.fetchFlood(date);
-                            if(flood_data != null) {
-                                that.displayed_flood = flood_data[0];
-                                that.fetchVulnerability(flood_data[0]['id']);
-                                let polygon = Wellknown.parse('SRID=4326;' + flood_data[0]['st_astext']);
-                                dispatcher.trigger('map:draw-geojson', polygon);
-                                $('.flood-info').html('<div>' + flood_data[0].name + '</div>');
-                                if(flood_data.length > 1){
-                                    $('.browse-arrow').show();
-                                    $('.arrow-down').attr('data-flood-id', flood_data[1]['id']).prop('disabled', false);
-                                }else {
-                                    $('.browse-arrow').prop('disabled', true).hide();
-                                }
-                            }else {
-                                that.displayed_flood = null;
-                                $('.flood-info').html('');
-                                dispatcher.trigger('map:remove-geojson');
-                                $('.browse-arrow').prop('disabled', true).hide();
-                            }
+                    // create date hash for easier indexing
+                    let date_hash = data.map(function (value) {
+                        let date_string = value.forecast_date.local().formatDate();
+                        return {
+                            [date_string]: value
+                        };
+                    }).reduce(function (accumulator, value) {
+                        _.extend(accumulator, value);
+                        return accumulator;
+                    }, {});
 
-                            // Enable or disable next and previous button.
-                            let _date = new Date(date);
-                            _date.setTime(_date.getTime() - _date.getTimezoneOffset() * 60 * 1000);
-                            _date.setUTCHours(0,0,0,0);
-                            let flood_dates = that.flood_dates;
-                            let beforedates = flood_dates.filter(function(d) {
-                                return d - _date < 0;
-                            });
+                    that.event_date_hash = date_hash;
 
-                            let afterdates = flood_dates.filter(function(d) {
-                                return d - _date > 0;
-                            });
+                    // decorate the date picker here
+                    dispatcher.trigger('flood:update-forecast-collection', that);
+            })
+        },
+        updateForecastsList: function(forecasts){
+            if(forecasts.length > 1){
+                // TODO:
+                // if more than one forecasts, display forecasts list
+            }
+            else {
+                // TODO:
+                // if only single forecast. What to display
+            }
+        },
+        updateForecastsPager: function(current_date){
+            // check if there are previous date
+            let prev_forecasts = this.forecasts_list.filter(forecast => current_date - forecast.forecast_date.local().momentDateOnly() > 0);
+            // do not disable if there are previous date
+            this.$prev_date_arrow.prop('disabled', !(prev_forecasts.length > 0));
+            // find newest date
+            if(prev_forecasts.length > 0 ) {
+                let prev_forecast = prev_forecasts.reduce((accumulator, value) => value.forecast_date > accumulator.forecast_date ? value : accumulator, prev_forecasts[0]);
+                this.$prev_date_arrow.attr('data-forecast-date', prev_forecast.forecast_date.local().formatDate());
+            }
+            // check if there are next date
+            let next_forecasts = this.forecasts_list.filter(forecast =>  forecast.forecast_date.local().momentDateOnly() - current_date > 0);
+            // do not disable if there are previous date
+            this.$next_date_arrow.prop('disabled', !(next_forecasts.length > 0));
+            // find oldest date
+            if(next_forecasts.length > 0 ) {
+                let next_forecast = next_forecasts.reduce((accumulator, value) => value.forecast_date < accumulator.forecast_date ? value : accumulator, next_forecasts[0]);
+                this.$next_date_arrow.attr('data-forecast-date', next_forecast.forecast_date.local().formatDate());
+            }
 
-                            if(beforedates.length < 1){
-                                $('#prev-date').prop('disabled', true)
-                            }else {
-                                $('#prev-date').prop('disabled', false)
-                            }
+            // update date text
+            this.$datepicker_browse.val(current_date.local().format('DD/MM/YYYY'));
+        },
+        selectForecast: function(forecast){
+            this.selected_forecast = forecast;
+            // dispatch event to draw flood
+            dispatcher.trigger('map:draw-forecast-layer', forecast);
+            // change flood info
+            this.$flood_info.html(`<div>${forecast.get('notes')}</div>`);
+        },
+        deselectForecast: function(){
+            // when no forecast, deselect
+            this.selected_forecast = null;
+            this.$flood_info.empty();
+            this.$datepicker_browse.val('Select forecast date');
+            dispatcher.trigger('map:remove-forecast-layer');
+        },
+        fetchForecast: function (date, optional_forecast_id) {
+            const that = this;
+            // get event aggregate information from date string hash
+            let date_string = moment(date).formatDate();
+            let forecast_events_aggregate = this.event_date_hash[date_string];
 
-                            if(afterdates.length < 1){
-                                $('#next-date').prop('disabled', true)
-                            }else {
-                                $('#next-date').prop('disabled', false)
-                            }
+            // if no forecast, do nothing
+            if(!forecast_events_aggregate) {
+                this.deselectForecast();
+                return;
+            }
 
-                        }
-                    });
-                },
-                function (data, textStatus, request) {
-                    $floodListBtn.val('Fetch failed.');
-                    console.log(data);
+            // fetch forecasts list for the date
+            forecast_events_aggregate.available_forecasts()
+                .then(function (data) {
+                    if(data && data.length > 0 && optional_forecast_id){
+                        // if forecast id specified, select that instead of first forecast.
+                        data = data.filter(forecast => forecast.get('id') === optional_forecast_id);
+                    }
+                    if(data && data.length > 0){
+                        // for now, select first forecast
+                        that.selectForecast(data[0]);
+                    }
+                    else {
+                        that.deselectForecast();
+                    }
+                    that.updateForecastsList(data);
+                    that.updateForecastsPager(moment(date));
                 });
         },
-        fetchFlood: function (date) {
-            if(date) {
-                let that = this;
-                let _date = new Date(date);
-                _date.setTime(_date.getTime() - _date.getTimezoneOffset() * 60 * 1000);
-                _date.setUTCHours(0, 0, 0, 0);
-                let string_date = _date.toISOString();
-                that.flood_on_date = that.flood_collection[string_date];
-                
-                return that.flood_on_date
-            }else {
-                return null
-            }
-        },
-        fetchFloodByID: function (id) {
-            let that = this;
-            let lengthArray = that.flood_on_date.length - 1;
-
-            for(var i=0; i<lengthArray + 1; i++) {
-                let flood = that.flood_on_date[i];
-                if(flood['id'] === parseInt(id)){
-                    that.displayed_flood = flood;
-                    that.fetchVulnerability(flood['id']);
-                    let prev = '';
-                    let after = '';
-
-                    if (i > 0) {
-                        prev = that.flood_on_date[i - 1]['id'];
-                        $('.arrow-up').prop('disabled', false).attr('data-flood-id', prev);
-                    } else {
-                        $('.arrow-up').prop('disabled', true)
-                    }
-
-                    if (i < lengthArray) {
-                        after = that.flood_on_date[i + 1]['id'];
-                        $('.arrow-down').prop('disabled', false).attr('data-flood-id', after);
-                    } else {
-                        $('.arrow-down').prop('disabled', true)
-                    }
-                    $('.flood-info').html('<div>' + flood['name'] + '</div>');
-
-                    let polygon = Wellknown.parse('SRID=4326;' + flood['st_astext']);
-                    dispatcher.trigger('map:draw-geojson', polygon);
-                    break;
-                }
-            }
+        clickNavigateForecast: function (e) {
+            let date_string = $(e.currentTarget).attr('data-forecast-date');
+            let selected_date = moment(date_string);
+            // selecting date in date picker will trigger flood selection again.
+            this.datepicker_browse.selectDate(selected_date.toJavascriptDate());
         },
         fetchBuildingType: function () {
             let that = this;

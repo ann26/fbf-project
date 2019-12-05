@@ -33,7 +33,7 @@ define([
 
             let general_template = that.template;
             $(that.general_summary).html(general_template({
-                flood_name: floodCollectionView.displayed_flood.name
+                flood_name: floodCollectionView.selected_forecast.notes
             }));
             $('#vulnerability-score').html(that.loading_template);
             $('#building-count').html(that.loading_template);
@@ -118,7 +118,7 @@ define([
         },
         hideDashboard: function () {
             let $datepicker = $('.datepicker-browse');
-            let datepicker_data = $datepicker.datepicker().data('datepicker');
+            let datepicker_data = $datepicker.data('datepicker');
             datepicker_data.clear();
             $('#panel-dashboard').hide();
         }

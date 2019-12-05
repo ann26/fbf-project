@@ -2,9 +2,10 @@ define([
     'backbone',
     'underscore',
     'jquery',
+    'moment',
     'js/model/flood.js',
     'js/model/forecast_event.js'
-], function (Backbone, _, $, FloodModel, ForecastEvent) {
+], function (Backbone, _, $, moment, FloodModel, ForecastEvent) {
     return Backbone.View.extend({
         el: "#upload-flood-form",
         events: {
@@ -24,6 +25,8 @@ define([
             this.$return_period = $form.find("input[name='return_period']");
             this.$acquisition_date = $form.find("input[name='acquisition_date']");
             this.$forecast_date = $form.find("input[name='forecast_date']");
+
+            dispatcher.on('flood:update-forecast-collection', this.selectUploadedForecast, this);
         },
 
         submitForm: function(e){
@@ -40,8 +43,8 @@ define([
             const source_url = this.$source_url.val();
             const geojson = this.$geojson[0].files;
             const return_period = this.$return_period.val();
-            const acquisition_date = new Date(this.$acquisition_date.val()).toMysqlFormat();
-            const forecast_date = new Date(this.$forecast_date.val()).toMysqlFormat();
+            const acquisition_date = moment.fromAirDateTimePicker(this.$acquisition_date.val()).format();
+            const forecast_date = moment.fromAirDateTimePicker(this.$forecast_date.val()).format();
 
 
             const forecast_event_attr = {
@@ -97,6 +100,10 @@ define([
                         alert('Flood map successfully uploaded.');
                         that.$el.find('[type=submit]').show();
                         that.progressbar.hide();
+
+                        // New data has been uploaded
+                        // Refresh forecast list
+                        dispatcher.trigger('flood:fetch-forecast-collection');
                     }
                     else if(textStatus !== 'success') {
                         alert('Upload Failed. Forecast information failed to save');
@@ -105,6 +112,15 @@ define([
                     }
                 });
 
+        },
+
+        selectUploadedForecast: function(forecast_collection_view){
+            if(this.forecast_event) {
+                let forecast_date = moment(this.forecast_event.get('forecast_date'));
+                forecast_collection_view.fetchForecast(
+                    forecast_date.local().formatDate(),
+                    this.forecast_event.get('id'));
+            }
         },
 
         setProgressBar: function(value){
