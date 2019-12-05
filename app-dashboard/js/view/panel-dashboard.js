@@ -25,6 +25,7 @@ define([
             'click .btn-back-summary-panel': 'backPanelDrilldown'
         },
         initialize: function () {
+            this.referer_region = [];
             dispatcher.on('dashboard:render-chart', this.renderChart, this);
             dispatcher.on('dashboard:render-chart-2', this.renderChart2, this);
             dispatcher.on('dashboard:reset', this.resetDashboard, this);
@@ -35,6 +36,7 @@ define([
             this.render();
         },
         render: function () {
+            this.referer_region = [];
             let that = this;
             let $action = $(that.status_wrapper);
             $action.html(that.loading_template);
@@ -126,18 +128,24 @@ define([
             let that = this;
             if(main_panel){
                 $('.btn-back-summary-panel').hide();
-                that.referer_region.push({
+                let referer = {
                     region: 'district',
                     id: 'main'
-                });
+                };
+                if(!that.containsReferer(referer, that.referer_region)) {
+                    that.referer_region.push(referer);
+                }
                 $('#main-panel-header').html('Summary for Flood ' + floodCollectionView.displayed_flood.name)
             }else {
                 $('.btn-back-summary-panel').show();
                 let region = data['region'];
-                that.referer_region.push({
+                let referer = {
                     region: region,
                     id: data['id']
-                });
+                };
+                if(!that.containsReferer(referer, that.referer_region)) {
+                    that.referer_region.push(referer);
+                }
                 $('#main-panel-header').html('Summary For ' + toTitleCase(region.replace('_', ' ')) + ' ' + data["name"])
             }
             console.log(this.referer_region)
@@ -273,6 +281,7 @@ define([
             $('#status').css('background-color', this.colour_code[status])
         },
         resetDashboard: function () {
+            this.referer_region = [];
             $('#status').css('background-color', '#D1D3D4');
             $(this.status_wrapper).html('-');
             $(this.general_summary).empty().html('' +
@@ -281,6 +290,7 @@ define([
                 '    </div>');
         },
         hideDashboard: function () {
+            this.referer_region = [];
             let $datepicker = $('.datepicker-browse');
             let datepicker_data = $datepicker.datepicker().data('datepicker');
             datepicker_data.clear();
@@ -296,11 +306,7 @@ define([
         },
         backPanelDrilldown: function (e) {
             let that = this;
-            let original_referer = this.referer_region;
             this.referer_region.pop();
-            if(this.referer_region === original_referer){
-                that.referer_region.pop()
-            }
 
             let $button = $(e.target).closest('.btn-back-summary-panel');
             let region = $button.attr('data-region');
@@ -321,6 +327,20 @@ define([
 
             $('.btn-back-summary-panel').attr('data-region', referer_region).attr('data-region-id', referer_region_id);
             dispatcher.trigger('flood:fetch-dummy-data', region, region_id, main);
+        },
+        containsReferer: function (obj, list) {
+            var i;
+            for (i = 0; i < list.length; i++) {
+                if (list[i].region === obj.region && list[i].id === obj.id) {
+                    return true;
+                }
+
+                if (list[i].region === obj.region && list[i].id !== 'main') {
+                    return true;
+                }
+            }
+
+            return false;
         }
     })
 });
