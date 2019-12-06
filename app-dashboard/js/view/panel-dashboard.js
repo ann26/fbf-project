@@ -44,14 +44,14 @@ define([
 
             let general_template = that.template;
 
-            let flood_acquisition_date = new Date(floodCollectionView.displayed_flood.reporting_date_time);
-            let flood_forecast_date = new Date(floodCollectionView.displayed_flood.forecast_date_time);
+            let flood_acquisition_date = new Date(floodCollectionView.selected_forecast.attributes.acquisition_date);
+            let flood_forecast_date = new Date(floodCollectionView.selected_forecast.attributes.forecast_date);
 
             $(that.general_summary).html(general_template({
-                flood_name: floodCollectionView.displayed_flood.name,
+                flood_name: floodCollectionView.selected_forecast.attributes.notes,
                 acquisition_date: flood_acquisition_date.getDate() + ' ' + monthNames[flood_acquisition_date.getMonth()] + ' ' + flood_acquisition_date.getFullYear(),
                 forecast_date: flood_forecast_date.getDate() + ' ' + monthNames[flood_forecast_date.getMonth()] + ' ' + flood_forecast_date.getFullYear(),
-                source: floodCollectionView.displayed_flood.source,
+                source: floodCollectionView.selected_forecast.attributes.source,
                 notes: '',
                 link: ''
             }));
@@ -135,7 +135,7 @@ define([
                 if(!that.containsReferer(referer, that.referer_region)) {
                     that.referer_region.push(referer);
                 }
-                $('#main-panel-header').html('Summary for Flood ' + floodCollectionView.displayed_flood.name)
+                $('#main-panel-header').html('Summary for Flood ' + floodCollectionView.selected_forecast.attributes.notes)
             }else {
                 $('.btn-back-summary-panel').show();
                 let region = data['region'];
@@ -291,7 +291,7 @@ define([
         hideDashboard: function () {
             this.referer_region = [];
             let $datepicker = $('.datepicker-browse');
-            let datepicker_data = $datepicker.datepicker().data('datepicker');
+            let datepicker_data = $datepicker.data('datepicker');
             datepicker_data.clear();
             $('#panel-dashboard').hide();
         },

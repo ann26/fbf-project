@@ -1,6 +1,8 @@
 define([
     'backbone',
-    'jquery'], function (Backbone, $) {
+    'underscore',
+    'jquery'], function (Backbone, _, $) {
+
     return Backbone.View.extend({
         get: function (url, parameters, headers, successCallback, errorCallback) {
             /** GET Request that receive url and handle callback **/
