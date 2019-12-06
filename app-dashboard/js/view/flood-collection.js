@@ -205,8 +205,10 @@ define([
                         }
                     })
                 });
-                overall['police_station_flooded_building_count'] = overall['police_flooded_building_count'];
-                delete overall['police_flooded_building_count'];
+                if(overall.hasOwnProperty('police_flooded_building_count')) {
+                    overall['police_station_flooded_building_count'] = overall['police_flooded_building_count'];
+                    delete overall['police_flooded_building_count'];
+                }
                 delete overall[region + '_id'];
                 delete overall['name'];
                 delete overall['village_code'];
@@ -246,8 +248,10 @@ define([
                 for(let index=0; index<data[region].length; index++){
                     if(data[region][index]['id'] === parseInt(region_id)){
                         overall = data[region][index];
-                        overall['police_station_flooded_building_count'] = overall['police_flooded_building_count'];
-                        delete overall['police_flooded_building_count'];
+                        if(overall.hasOwnProperty('police_flooded_building_count')) {
+                            overall['police_station_flooded_building_count'] = overall['police_flooded_building_count'];
+                            delete overall['police_flooded_building_count'];
+                        }
                         break
                     }
                 }

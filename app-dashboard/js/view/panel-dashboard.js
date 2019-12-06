@@ -160,7 +160,7 @@ define([
             let backgroundColours = [];
             let unlisted_key = [
                 'id', 'flood_event_id', 'vulnerability_total_score', 'flooded_building_count', 'building_count',
-                'village_id', 'name', 'region', 'district_id', 'sub_district_id', 'sub_dc_code', 'village_code'
+                'village_id', 'name', 'region', 'district_id', 'sub_district_id', 'sub_dc_code', 'village_code', 'dc_code'
             ];
             for(var key in data) {
                 if(unlisted_key.indexOf(key) === -1 && key.indexOf('flood') > -1) {
