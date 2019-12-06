@@ -148,7 +148,6 @@ define([
                 }
                 $('#main-panel-header').html('Summary For ' + toTitleCase(region.replace('_', ' ')) + ' ' + data["name"])
             }
-            console.log(this.referer_region)
 
             let $parentWrapper = $('#chart-score-panel');
             $parentWrapper.find('#summary-chart').remove();
@@ -161,7 +160,7 @@ define([
             let backgroundColours = [];
             let unlisted_key = [
                 'id', 'flood_event_id', 'vulnerability_total_score', 'flooded_building_count', 'building_count',
-                'village_id', 'name', 'region', 'district_id', 'sub_district_id'
+                'village_id', 'name', 'region', 'district_id', 'sub_district_id', 'sub_dc_code', 'village_code'
             ];
             for(var key in data) {
                 if(unlisted_key.indexOf(key) === -1 && key.indexOf('flood') > -1) {
@@ -268,13 +267,13 @@ define([
                 let item = data[u];
                 $table.append(item_template({
                     region: region,
-                    id: item[region + '_id'],
+                    id: item['id'],
                     name: item['name'],
                     flooded_vulnerability_total: item['vulnerability_total_score'].toFixed(2),
                     flooded_building_count: item['flooded_building_count']
                 }));
             }
-            $wrapper.append($table)
+            $wrapper.append($table);
         },
         changeStatus: function (status) {
             $(this.status_wrapper).html(status.toUpperCase() + '!');
@@ -302,7 +301,7 @@ define([
             let region = $button.attr('data-region');
             let region_id = parseInt($button.attr('data-region-id'));
             $('.btn-back-summary-panel').attr('data-region', that.referer_region[that.referer_region.length - 1].region).attr('data-region-id', that.referer_region[that.referer_region.length -1].id);
-            dispatcher.trigger('flood:fetch-dummy-data', region, region_id, false);
+            dispatcher.trigger('flood:fetch-stats-data', region, region_id, false);
         },
         backPanelDrilldown: function (e) {
             let that = this;
@@ -326,7 +325,7 @@ define([
             }
 
             $('.btn-back-summary-panel').attr('data-region', referer_region).attr('data-region-id', referer_region_id);
-            dispatcher.trigger('flood:fetch-dummy-data', region, region_id, main);
+            dispatcher.trigger('flood:fetch-stats-data', region, region_id, main);
         },
         containsReferer: function (obj, list) {
             var i;

@@ -223,6 +223,11 @@ form label {
     font-size: 30px;
 }
 
+#building-count, #vulnerability-score {
+    height: 42px;
+    width: 130px;
+}
+
 .box-building {
     float: right;
 }

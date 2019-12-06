@@ -5,15 +5,20 @@ define([
         flood_collection: null,
         flood_on_date: null,
         displayed_flood: null,
-        building_type: {},
         flood_dates: [],
+        villageStats: null,
+        subDistrictStats: null,
+        districtStats: null,
+        areaLookup: null,
+        dummyFlood: {
+            name: 'Dummy Flood',
+            id: 15,
+        },
         initialize: function () {
-            this.fetchBuildingType();
             this.fetchFloodCollection();
             dispatcher.on('flood:fetch-flood', this.fetchFlood, this);
             dispatcher.on('flood:fetch-flood-by-id', this.fetchFloodByID, this);
-            dispatcher.on('flood:fetch-flood-vulnerability', this.fetchVulnerability, this);
-            dispatcher.on('flood:fetch-dummy-data', this.fetchDummyData, this)
+            dispatcher.on('flood:fetch-stats-data', this.fetchStatisticData, this)
         },
         fetchFloodCollection: function () {
             let $floodListBtn = $('#date-browse-flood');
@@ -69,8 +74,13 @@ define([
                             let flood_data = that.fetchFlood(date);
                             if(flood_data != null) {
                                 that.displayed_flood = flood_data[0];
-                                // that.fetchVulnerability(flood_data[0]['id']);
-                                let polygon = Wellknown.parse('SRID=4326;' + flood_data[0]['st_astext']);
+
+                                that.fetchAreaLookUp(that.displayed_flood.id);
+                                that.fetchVillageData(that.displayed_flood.id);
+                                that.fetchSubDistrictData(that.displayed_flood.id);
+                                that.fetchDistrictData(that.displayed_flood.id);
+
+                                let polygon = Wellknown.parse('SRID=4326;' + that.displayed_flood['st_astext']);
                                 dispatcher.trigger('map:draw-geojson', polygon);
                                 $('.flood-info').html('<div>' + flood_data[0].name + '</div>');
                                 if(flood_data.length > 1){
@@ -79,7 +89,6 @@ define([
                                 }else {
                                     $('.browse-arrow').prop('disabled', true).hide();
                                 }
-                                that.fetchDummyData('district', flood_data[0]['id'], true);
                             }else {
                                 that.displayed_flood = null;
                                 $('.flood-info').html('');
@@ -142,7 +151,7 @@ define([
                 let flood = that.flood_on_date[i];
                 if(flood['id'] === parseInt(id)){
                     that.displayed_flood = flood;
-                    that.fetchVulnerability(flood['id']);
+                    that.fetchDistrictData(flood[0].id);
                     let prev = '';
                     let after = '';
 
@@ -167,72 +176,16 @@ define([
                 }
             }
         },
-        fetchBuildingType: function () {
-            let that = this;
-            this.xhrBuildingType = AppRequest.get(
-                postgresUrl + 'building_type_class',
-                {
-                    order: 'id.asc'
-                },
-                {
-                    'Range-Unit': 'items',
-                    'Range': '',
-                    'Prefer': ''
-                },
-                function (data, textStatus, request) {
-                    $.each(data, function (id, value) {
-                        that.building_type[value['id']] = value['building_class']
-                    });
-                },function (data, textStatus, request) {
-                    console.log('Building type request failed');
-                    console.log(data)
-                })
-        },
-        fetchVulnerability: function (flood_id) {
-            let that = this;
-            this.xhrBuildingType = AppRequest.get(
-                postgresUrl + 'osm_buildings_intersect_v?flood_id=eq.' + flood_id,
-                {
-                    order: 'building_id.asc'
-                },
-                {
-                    'Range-Unit': 'items',
-                    'Range': '',
-                    'Prefer': ''
-                },
-                function (data, textStatus, request) {
-                    let affected_buildings = {};
-                    let labels = [];
-                    $.each(data, function (idx, value) {
-                        let building_type = that.building_type[value['building_id']];
-                        if(affected_buildings[building_type]){
-                            affected_buildings[building_type]['vulnerability'] += value['total_vulnerability'];
-                            affected_buildings[building_type]['count'] += 1;
-                        }else {
-                            affected_buildings[building_type] = {
-                                vulnerability: value['total_vulnerability'],
-                                count: 1
-                            };
-                            labels.push(building_type)
-                        }
-
-                    });
-                    dispatcher.trigger('dashboard:render-chart', affected_buildings, labels)
-                },function (data, textStatus, request) {
-                    console.log('Vulnerability request failed');
-                    console.log(data);
-                    return null
-                })
-        },
-        fetchDummyData: function (region, region_id, renderRegionDetail) {
+        fetchStatisticData: function (region, region_id, renderRegionDetail) {
             if(!region) {
                 return []
             }
 
+            let that = this;
             let data = {
-                'village': dummyVillage,
-                'district': dummyDistrict,
-                'sub_district': dummySubdistrict
+                'village': that.villageStats,
+                'district': that.districtStats,
+                'sub_district': that.subDistrictStats
             };
 
             let buildings = [];
@@ -252,8 +205,12 @@ define([
                         }
                     })
                 });
+                overall['police_station_flooded_building_count'] = overall['police_flooded_building_count'];
+                delete overall['police_flooded_building_count'];
                 delete overall[region + '_id'];
                 delete overall['name'];
+                delete overall['village_code'];
+                delete overall['sub_dc_code'];
             }else {
                 main_panel = false;
                 let sub_region = 'sub_district';
@@ -262,10 +219,25 @@ define([
                 }
                 region_render = sub_region;
 
+                let statData = [];
+                let key = {
+                    'sub_district': 'sub_district_id',
+                    'village': 'village_id'
+                };
+                let subRegionList = that.getListSubRegion(sub_region, region_id);
+                $.each(data[sub_region], function (index, value) {
+                    if(subRegionList.indexOf(value[key[sub_region]])){
+                        statData.push(value)
+                    }
+                });
+
                 if(region !== 'village') {
-                    $.each(data[sub_region], function (idx, value) {
+                    $.each(statData, function (idx, value) {
                         buildings[idx] = [];
                         $.each(value, function (key, value) {
+                            if(key === 'police_flooded_building_count'){
+                                key = 'police_station_flooded_building_count'
+                            }
                             buildings[idx][key] = value;
                         })
                     });
@@ -274,6 +246,8 @@ define([
                 for(let index=0; index<data[region].length; index++){
                     if(data[region][index]['id'] === parseInt(region_id)){
                         overall = data[region][index];
+                        overall['police_station_flooded_building_count'] = overall['police_flooded_building_count'];
+                        delete overall['police_flooded_building_count'];
                         break
                     }
                 }
@@ -284,6 +258,112 @@ define([
             if(region !== 'village') {
                 dispatcher.trigger('dashboard:render-region-summary', buildings, region_render)
             }
+        },
+        fetchVillageData: function (flood_event_id) {
+            flood_event_id = 15;
+            let that = this;
+            this.xhrVillageStats = AppRequest.get(
+                postgresUrl + 'flood_event_village_summary_mv?flood_event_id=eq.' + flood_event_id,
+                {
+                    order: 'id.asc'
+                },
+                {
+                    'Range-Unit': 'items',
+                    'Range': '',
+                    'Prefer': ''
+                },
+                function (data, textStatus, request) {
+                    that.villageStats = data;
+                    if(that.villageStats !== null && that.districtStats !== null && that.subDistrictStats !== null) {
+                        that.fetchStatisticData('district', that.displayed_flood['id'], true);
+                    }
+                },function (data, textStatus, request) {
+                    console.log('Village stats request failed');
+                    console.log(data)
+                })
+        },
+        fetchDistrictData: function (flood_event_id) {
+            flood_event_id = 15;
+            let that = this;
+            this.xhrDistrictStats = AppRequest.get(
+                postgresUrl + 'flood_event_district_summary_mv?flood_event_id=eq.' + flood_event_id,
+                {
+                    order: 'id.asc'
+                },
+                {
+                    'Range-Unit': 'items',
+                    'Range': '',
+                    'Prefer': ''
+                },
+                function (data, textStatus, request) {
+                    that.districtStats = data;
+                    if(that.villageStats !== null && that.districtStats !== null && that.subDistrictStats !== null) {
+                        that.fetchStatisticData('district', that.displayed_flood['id'], true);
+                    }
+                },function (data, textStatus, request) {
+                    console.log('District stats request failed');
+                    console.log(data)
+                })
+        },
+        fetchSubDistrictData: function (flood_event_id) {
+            flood_event_id = 15;
+            let that = this;
+            this.xhrSubDistrictStats = AppRequest.get(
+                postgresUrl + 'flood_event_sub_district_summary_mv?flood_event_id=eq.' + flood_event_id,
+                {
+                    order: 'id.asc'
+                },
+                {
+                    'Range-Unit': 'items',
+                    'Range': '',
+                    'Prefer': ''
+                },
+                function (data, textStatus, request) {
+                    that.subDistrictStats = data;
+                    if(that.villageStats !== null && that.districtStats !== null && that.subDistrictStats !== null) {
+                        that.fetchStatisticData('district', that.displayed_flood['id'], true);
+                    }
+                },function (data, textStatus, request) {
+                    console.log('Sub district stats request failed');
+                    console.log(data)
+                })
+        },
+        fetchAreaLookUp: function (flood_event_id) {
+            let that = this;
+            this.xhrSubDistrictStats = AppRequest.get(
+                postgresUrl + 'flood_event_sub_district_summary_mv?flood_event_id=eq.' + flood_event_id,
+                {
+                    order: 'id.asc'
+                },
+                {
+                    'Range-Unit': 'items',
+                    'Range': '',
+                    'Prefer': ''
+                },
+                function (data, textStatus, request) {
+                    that.areaLookup = data;
+                },function (data, textStatus, request) {
+                    console.log('Area lookup request failed');
+                    console.log(data)
+                })
+        },
+        getListSubRegion: function (region, district_id) {
+            let key = {
+                'sub_district': 'sub_dc_code',
+                'village': 'village_code'
+            };
+            let keyParent = {
+                'sub_district': 'dc_code',
+                'village': 'sub_dc_code'
+            };
+            let that = this;
+            let listSubRegion = [];
+            $.each(that.areaLookup, function (index, value) {
+                if(parseInt(value[keyParent[region]]) === parseInt(district_id)){
+                    listSubRegion.push(value[key[region]])
+                }
+            });
+            return listSubRegion
         }
     })
 });
