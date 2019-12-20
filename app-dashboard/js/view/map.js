@@ -107,6 +107,9 @@ define([
             if(this.wmsLegend) {
                 this.map.removeControl(this.wmsLegend)
             }
+            if(this.wmsFloodLegend){
+                this.map.removeControl(this.wmsFloodLegend)
+            }
             $.each(this.layers.layers, function (index, layer) {
                 layer.addLayer();
             });
@@ -302,7 +305,7 @@ define([
             });
             this.exposed_layers.forEach(l => that.addOverlayLayer(l.layer, l.name));
             this.wmsLegend = L.wmsLegend(this.wmsLegendURI, this.map, 'wms-legend-icon fa fa-binoculars');
-            this.wmsLegend = L.wmsLegend(this.wmsFloodDepthLegendURI, this.map, 'wms-legend-icon fa fa-map-signs');
+            this.wmsFloodLegend = L.wmsLegend(this.wmsFloodDepthLegendURI, this.map, 'wms-legend-icon fa fa-map-signs');
         },
         addMarker: function (centroid, trigger_status) {
             if(centroid) {
