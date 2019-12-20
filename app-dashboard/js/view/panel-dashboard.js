@@ -48,10 +48,9 @@ define([
             let flood_acquisition_date = new Date(floodCollectionView.selected_forecast.attributes.acquisition_date);
             let flood_forecast_date = new Date(floodCollectionView.selected_forecast.attributes.forecast_date);
 
-            let lead_time = flood_forecast_date.getDate() - new Date().getDate();
+            let lead_time = floodCollectionView.selected_forecast.attributes.lead_time;
             let event_status = 'Current';
-            if(lead_time < 0){
-                lead_time = '-';
+            if(floodCollectionView.selected_forecast.attributes.is_historical){
                 event_status = 'Historical'
             }
             $(that.general_summary).html(general_template({
@@ -61,7 +60,7 @@ define([
                 source: floodCollectionView.selected_forecast.attributes.source,
                 notes: floodCollectionView.selected_forecast.attributes.notes,
                 link: floodCollectionView.selected_forecast.attributes.link,
-                lead_time: lead_time + ' Days',
+                lead_time: lead_time + ' Day(s)',
                 event_status: event_status
             }));
             $('#vulnerability-score').html(that.loading_template);
