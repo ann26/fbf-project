@@ -10,7 +10,6 @@ define([
             this.groups = {
                 'Buildings': buildings.group,
             }
-            this.polygonStatistic = new PolygonStatistic([buildings.statistic]);
         },
     });
 });
